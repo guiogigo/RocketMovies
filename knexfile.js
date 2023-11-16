@@ -11,6 +11,9 @@ module.exports = {
     migrations: {
       directory: path.resolve(__dirname, "src", "database", "knex", "migrations")
     },
+    pool: {
+      afterCreate: (conn, cb) => conn.run("PRAGMA foreign_keys = ON", cb)//Habilita a deleção em cascata do itens do banco de dados
+    },
     seeds: {
       directory: path.resolve(__dirname, "src", "database", "knex", "seeds")
     }

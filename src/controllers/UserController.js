@@ -1,6 +1,6 @@
 const knex = require("../database/knex");
 const AppError = require("../utils/AppError");
-const { hash } = require("bcryptjs");
+const { hash, compare } = require("bcryptjs");
 
 class UserController {
     async create(req, res) {
@@ -29,32 +29,37 @@ class UserController {
         const { name, email, password, old_email, old_password } = req.body;
         const { id } = req.params;
 
-        const user_email = await knex('users').select('email').where({id});
+        if(!email) throw new AppError("Insira um email");
+        if(!password) throw new AppError("Insira uma senha");
 
-        if(email !== user_email[0].email) {
-            if(old_email === user_email[0].email) {
+        const user_email = await knex('users').select('email').where({id}).first();
+        const userEmail = user_email.email
+
+        if(email !== userEmail) {
+            if(old_email === userEmail) {
                 await knex('users').update({
                     email,
                 }).where({id});
             } else throw new AppError("Email inválido!");
         }
 
-        const user_password = await knex('users').select('password').where({id}).first().password;
+        const user_password = await knex('users').select('password').where({id}).first();
+        const userPassword = user_password.password
 
-        if(password !== user_password) {
-            /*if(old_password === user_password) {
-                await knex('users').update({
-                    password,
-                }).where({id});
-            } else throw new AppError("Senha inválida!");*/
-            throw new AppError("Senha aqui");
+        if(password) {
+            const hashedPassword = await hash(password, 8);
+            if(old_password) {
+                const checagemOldPassword = await compare(old_password, userPassword);
+                if(checagemOldPassword) {
+                    await knex('users').update({
+                        'password': hashedPassword,
+                    }).where({id});
+                } else throw new AppError("Senha inválida!");
+            }
         }
-
 
         await knex('users').update({
             name,
-            email,
-            password
         }).where({id});
 
         return res.json();
